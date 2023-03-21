@@ -1,2 +1,2 @@
 # cache-file
-infra.go file cache driver.
+infra.Go file cache driver.
