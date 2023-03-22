@@ -25,9 +25,8 @@ type (
 	fileConnect struct {
 		mutex sync.RWMutex
 
-		name    string
-		config  cache.Config
-		setting fileSetting
+		instance *cache.Instance
+		setting  fileSetting
 
 		db *buntdb.DB
 	}
@@ -37,7 +36,7 @@ type (
 )
 
 // 连接
-func (driver *fileDriver) Connect(name string, config cache.Config) (cache.Connect, error) {
+func (driver *fileDriver) Connect(inst *cache.Instance) (cache.Connect, error) {
 	//获取配置信息
 	setting := fileSetting{
 		Store: "store/cache.db",
@@ -50,15 +49,15 @@ func (driver *fileDriver) Connect(name string, config cache.Config) (cache.Conne
 		os.MkdirAll(dir, 0700)
 	}
 
-	if vv, ok := config.Setting["file"].(string); ok && vv != "" {
+	if vv, ok := inst.Setting["file"].(string); ok && vv != "" {
 		setting.Store = vv
 	}
-	if vv, ok := config.Setting["store"].(string); ok && vv != "" {
+	if vv, ok := inst.Setting["store"].(string); ok && vv != "" {
 		setting.Store = vv
 	}
 
 	return &fileConnect{
-		name: name, config: config, setting: setting,
+		instance: inst, setting: setting,
 	}, nil
 }
 
