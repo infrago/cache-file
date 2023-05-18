@@ -111,7 +111,7 @@ func (this *fileConnect) Read(key string) ([]byte, error) {
 }
 
 // 更新缓存
-func (this *fileConnect) Write(key string, data []byte, expiry time.Duration) error {
+func (this *fileConnect) Write(key string, data []byte, expire time.Duration) error {
 	if this.db == nil {
 		return errInvalidCacheConnection
 	}
@@ -123,9 +123,9 @@ func (this *fileConnect) Write(key string, data []byte, expiry time.Duration) er
 
 	return this.db.Update(func(tx *buntdb.Tx) error {
 		opts := &buntdb.SetOptions{Expires: false}
-		if expiry > 0 {
+		if expire > 0 {
 			opts.Expires = true
-			opts.TTL = expiry
+			opts.TTL = expire
 		}
 		_, _, err := tx.Set(key, value, opts)
 		return err
@@ -162,7 +162,7 @@ func (this *fileConnect) Delete(key string) error {
 	})
 }
 
-func (this *fileConnect) Sequence(key string, start, step int64, expiry time.Duration) (int64, error) {
+func (this *fileConnect) Sequence(key string, start, step int64, expire time.Duration) (int64, error) {
 	value := start
 
 	if data, err := this.Read(key); err == nil {
@@ -176,7 +176,7 @@ func (this *fileConnect) Sequence(key string, start, step int64, expiry time.Dur
 
 	//写入值
 	data := []byte(fmt.Sprintf("%v", value))
-	err := this.Write(key, data, expiry)
+	err := this.Write(key, data, expire)
 	if err != nil {
 		return int64(0), err
 	}
