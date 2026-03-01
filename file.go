@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bamgoo/bamgoo"
-	"github.com/bamgoo/cache"
+	"github.com/infrago/infra"
+	"github.com/infrago/cache"
 	"github.com/tidwall/buntdb"
 )
 
@@ -21,7 +21,7 @@ type fileConnection struct {
 }
 
 func init() {
-	bamgoo.Register("file", &fileDriver{})
+	infra.Register("file", &fileDriver{})
 }
 
 func (d *fileDriver) Connect(inst *cache.Instance) (cache.Connect, error) {

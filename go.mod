@@ -1,16 +1,16 @@
-module github.com/bamgoo/cache-file
+module github.com/infrago/cache-file
 
 go 1.25.3
 
 require (
-	github.com/bamgoo/bamgoo v0.0.1
-	github.com/bamgoo/cache v0.0.1
+	github.com/infrago/infra v0.0.1
+	github.com/infrago/cache v0.0.1
 	github.com/tidwall/buntdb v1.3.0
 )
 
 require (
-	github.com/bamgoo/base v0.0.1 // indirect
-	github.com/bamgoo/util v0.0.1 // indirect
+	github.com/infrago/base v0.0.1 // indirect
+	github.com/infrago/util v0.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/coocood/freecache v1.2.4 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect

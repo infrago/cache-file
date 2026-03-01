@@ -1,2 +1,2 @@
 # cache-file
-bamgoo file cache driver.
+infrago file cache driver.
