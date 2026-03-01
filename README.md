@@ -1,49 +1,35 @@
 # cache-file
 
-`cache-file` 是 `cache` 模块的 `file` 驱动。
+`cache-file` 是 `github.com/infrago/cache` 的**file 驱动**。
 
-## 安装
+## 包定位
 
-```bash
-go get github.com/infrago/cache@latest
-go get github.com/infrago/cache-file@latest
-```
+- 类型：驱动
+- 作用：把 `cache` 模块的统一接口落到 `file` 后端实现
 
-## 接入
+## 快速接入
 
 ```go
 import (
     _ "github.com/infrago/cache"
     _ "github.com/infrago/cache-file"
-    "github.com/infrago/infra"
 )
-
-func main() {
-    infra.Run()
-}
 ```
-
-## 配置示例
 
 ```toml
 [cache]
 driver = "file"
 ```
 
-## 公开 API（摘自源码）
+## `setting` 专用配置项
 
-- `func (d *fileDriver) Connect(inst *cache.Instance) (cache.Connect, error)`
-- `func (c *fileConnection) Open() error`
-- `func (c *fileConnection) Close() error`
-- `func (c *fileConnection) Read(key string) ([]byte, error)`
-- `func (c *fileConnection) Write(key string, val []byte, expire time.Duration) error`
-- `func (c *fileConnection) Exists(key string) (bool, error)`
-- `func (c *fileConnection) Delete(key string) error`
-- `func (c *fileConnection) Sequence(key string, start, step int64, expire time.Duration) (int64, error)`
-- `func (c *fileConnection) Keys(prefix string) ([]string, error)`
-- `func (c *fileConnection) Clear(prefix string) error`
+配置位置：`[cache].setting`
 
-## 排错
+- `file`
+- `path`
+- `db`
 
-- driver 未生效：确认模块段 `driver` 值与驱动名一致
-- 连接失败：检查 endpoint/host/port/鉴权配置
+## 说明
+
+- `setting` 仅对当前驱动生效，不同驱动键名可能不同
+- 连接失败时优先核对 `setting` 中 host/port/认证/超时等参数
