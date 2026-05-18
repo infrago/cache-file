@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/infrago/infra"
 	"github.com/infrago/cache"
+	"github.com/infrago/infra"
 	"github.com/tidwall/buntdb"
 )
 
@@ -55,7 +55,9 @@ func (c *fileConnection) Open() error {
 
 func (c *fileConnection) Close() error {
 	if c.db != nil {
-		return c.db.Close()
+		err := c.db.Close()
+		c.db = nil
+		return err
 	}
 	return nil
 }
@@ -65,6 +67,7 @@ func (c *fileConnection) Read(key string) ([]byte, error) {
 		return nil, errors.New("cache db not open")
 	}
 	var val string
+	found := false
 	err := c.db.View(func(tx *buntdb.Tx) error {
 		v, err := tx.Get(key)
 		if err != nil {
@@ -74,12 +77,13 @@ func (c *fileConnection) Read(key string) ([]byte, error) {
 			return err
 		}
 		val = v
+		found = true
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	if val == "" {
+	if !found {
 		return nil, nil
 	}
 	return []byte(val), nil
@@ -132,16 +136,28 @@ func (c *fileConnection) Delete(key string) error {
 }
 
 func (c *fileConnection) Sequence(key string, start, step int64, expire time.Duration) (int64, error) {
+	vals, err := c.SequenceMany(key, start, step, 1, expire)
+	if err != nil {
+		return -1, err
+	}
+	return vals[0], nil
+}
+
+func (c *fileConnection) SequenceMany(key string, start, step, count int64, expire time.Duration) ([]int64, error) {
 	if c.db == nil {
-		return -1, errors.New("cache db not open")
+		return nil, errors.New("cache db not open")
+	}
+	if count <= 0 {
+		return []int64{}, nil
 	}
 	var current int64
+	vals := make([]int64, 0, count)
 	err := c.db.Update(func(tx *buntdb.Tx) error {
 		val, err := tx.Get(key)
 		if err != nil && err != buntdb.ErrNotFound {
 			return err
 		}
-		if val == "" {
+		if err == buntdb.ErrNotFound {
 			current = start
 		} else {
 			n, err := strconv.ParseInt(val, 10, 64)
@@ -150,6 +166,12 @@ func (c *fileConnection) Sequence(key string, start, step int64, expire time.Dur
 			}
 			current = n + step
 		}
+		for i := int64(0); i < count; i++ {
+			if i > 0 {
+				current += step
+			}
+			vals = append(vals, current)
+		}
 		opts := (*buntdb.SetOptions)(nil)
 		if expire > 0 {
 			opts = &buntdb.SetOptions{Expires: true, TTL: expire}
@@ -157,21 +179,16 @@ func (c *fileConnection) Sequence(key string, start, step int64, expire time.Dur
 		_, _, err = tx.Set(key, strconv.FormatInt(current, 10), opts)
 		return err
 	})
-	return current, err
+	return vals, err
 }
 
 func (c *fileConnection) Keys(prefix string) ([]string, error) {
 	if c.db == nil {
 		return nil, errors.New("cache db not open")
 	}
-	if prefix == "" {
-		prefix = "*"
-	} else if !strings.HasSuffix(prefix, "*") {
-		prefix = prefix + "*"
-	}
 	keys := make([]string, 0)
 	err := c.db.View(func(tx *buntdb.Tx) error {
-		return tx.AscendKeys(prefix, func(k, _ string) bool {
+		return c.scanPrefix(tx, prefix, func(k string) bool {
 			keys = append(keys, k)
 			return true
 		})
@@ -186,7 +203,7 @@ func (c *fileConnection) Clear(prefix string) error {
 	if prefix == "" {
 		return c.db.Update(func(tx *buntdb.Tx) error {
 			keys := make([]string, 0)
-			_ = tx.AscendKeys("*", func(k, _ string) bool {
+			_ = c.scanPrefix(tx, "", func(k string) bool {
 				keys = append(keys, k)
 				return true
 			})
@@ -196,12 +213,9 @@ func (c *fileConnection) Clear(prefix string) error {
 			return nil
 		})
 	}
-	if !strings.HasSuffix(prefix, "*") {
-		prefix = prefix + "*"
-	}
 	return c.db.Update(func(tx *buntdb.Tx) error {
 		keys := make([]string, 0)
-		_ = tx.AscendKeys(prefix, func(k, _ string) bool {
+		_ = c.scanPrefix(tx, prefix, func(k string) bool {
 			keys = append(keys, k)
 			return true
 		})
@@ -209,5 +223,19 @@ func (c *fileConnection) Clear(prefix string) error {
 			_, _ = tx.Delete(k)
 		}
 		return nil
+	})
+}
+
+func (c *fileConnection) scanPrefix(tx *buntdb.Tx, prefix string, iter func(key string) bool) error {
+	if prefix == "" {
+		return tx.Ascend("", func(k, _ string) bool {
+			return iter(k)
+		})
+	}
+	return tx.AscendGreaterOrEqual("", prefix, func(k, _ string) bool {
+		if !strings.HasPrefix(k, prefix) {
+			return false
+		}
+		return iter(k)
 	})
 }
